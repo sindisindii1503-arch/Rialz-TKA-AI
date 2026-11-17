@@ -1,0 +1,33 @@
+package com.rialz.tka
+
+import android.app.*
+import android.content.*
+import android.graphics.PixelFormat
+import android.os.*
+import android.view.*
+import android.widget.*
+
+class FloatingService : Service() {
+    private lateinit var wm: WindowManager
+    private var bubble: View? = null
+    override fun onBind(intent: Intent?) = null
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val channel = "rialz_overlay"
+        if (Build.VERSION.SDK_INT >= 26) { val nm=getSystemService(NotificationManager::class.java); nm.createNotificationChannel(NotificationChannel(channel,"Rialz TKA AI",NotificationManager.IMPORTANCE_LOW)); startForeground(7,Notification.Builder(this,channel).setContentTitle("Rialz TKA AI aktif").setContentText("Tombol belajar mengambang berjalan").setSmallIcon(android.R.drawable.ic_dialog_info).build()) }
+        if (bubble == null) showBubble()
+        return START_STICKY
+    }
+    private fun showBubble() {
+        wm=getSystemService(WINDOW_SERVICE) as WindowManager
+        val v=TextView(this).apply { text="Rz"; textSize=18f; gravity=Gravity.CENTER; setTextColor(0xFFFFFFFF.toInt()); setBackgroundColor(0xFF2563EB.toInt()); setPadding(22,16,22,16) }
+        val p=WindowManager.LayoutParams(WindowManager.LayoutParams.WRAP_CONTENT,WindowManager.LayoutParams.WRAP_CONTENT,if(Build.VERSION.SDK_INT>=26) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE,WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,PixelFormat.TRANSLUCENT).apply { gravity=Gravity.TOP or Gravity.START; x=30; y=250 }
+        var sx=0; var sy=0; var tx=0f; var ty=0f
+        v.setOnTouchListener { _,e -> when(e.action){ MotionEvent.ACTION_DOWN->{sx=p.x;sy=p.y;tx=e.rawX;ty=e.rawY;true}; MotionEvent.ACTION_MOVE->{p.x=sx+(e.rawX-tx).toInt();p.y=sy+(e.rawY-ty).toInt();wm.updateViewLayout(v,p);true}; MotionEvent.ACTION_UP->{if(kotlin.math.abs(e.rawX-tx)<12 && kotlin.math.abs(e.rawY-ty)<12) showMenu();true};else->false} }
+        wm.addView(v,p); bubble=v
+    }
+    private fun showMenu() {
+        val i=Intent(this,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(i)
+    }
+    override fun onDestroy(){ bubble?.let { wm.removeView(it) }; bubble=null; super.onDestroy() }
+}
